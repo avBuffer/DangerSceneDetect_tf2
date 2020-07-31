@@ -13,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from core.lr import LearningRateFinder
 from core.net import DetectionNet
+from core.resnet import ResnetBuilder
 from core import config
 from core import utils
 
@@ -59,12 +60,18 @@ if __name__ == '__main__':
 
     print("[INFO] compiling model...")
     opt = SGD(lr=config.INIT_LR, momentum=0.9, decay=config.INIT_LR / config.NUM_EPOCHS)
+    
     if os.path.exists(config.MODEL_PATH):
     	print("[INFO] loading from ", config.MODEL_PATH)
     	model = load_model(config.MODEL_PATH)
     else:
-    	model = DetectionNet.build(width=config.RESIZE_WH, height=config.RESIZE_WH, depth=3, classes=config.CLASS_NUM)
+        if config.NET_TYPE != 'resnet':
+            model = DetectionNet.build(width=config.RESIZE_WH, height=config.RESIZE_WH, depth=3, classes=config.CLASS_NUM)
+        else:
+            model = ResnetBuilder.build_resnet_18((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+    
     model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
+    print(model.summary())
 
     # check to see if we are attempting to find an optimal learning rate
     # before training for the full number of epochs
