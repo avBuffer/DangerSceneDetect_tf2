@@ -9,6 +9,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from core.lr import LearningRateFinder
@@ -32,19 +33,19 @@ if __name__ == '__main__':
     fireData = load_dataset(config.FIRE_PATH)
     robberyData = load_dataset(config.ROBBERY_PATH)
     print('safeData.len=', len(safeData), 'accidentData.len=', len(accidentData),
-    	  'fireData.len=', len(fireData), 'robberyData.len=', len(robberyData))
+          'fireData.len=', len(fireData), 'robberyData.len=', len(robberyData))
 
     safeLabels = np.zeros((safeData.shape[0],))
     accidentLabels = np.ones((accidentData.shape[0],))
     fireLabels = np.full((fireData.shape[0],), 2)
     robberyLabels = np.full((robberyData.shape[0],), 3)
     print('safeLabels.len=', len(safeLabels), 'accidentLabels.len=', len(accidentLabels),
-    	  'fireLabels.len=', len(fireLabels), 'robberyLabels.len=', len(robberyLabels))
+          'fireLabels.len=', len(fireLabels), 'robberyLabels.len=', len(robberyLabels))
 
     data = np.vstack([fireData, nonFireData])
     labels = np.hstack([fireLabels, nonFireLabels])
     data /= 255
-	print('data.len=', len(data), 'labels.len=', len(labels))
+    print('data.len=', len(data), 'labels.len=', len(labels))
 
     # perform one-hot encoding on the labels and account for skew in the labeled data
     labels = to_categorical(labels, num_classes=config.CLASS_NUM)
@@ -62,15 +63,31 @@ if __name__ == '__main__':
     opt = SGD(lr=config.INIT_LR, momentum=0.9, decay=config.INIT_LR / config.NUM_EPOCHS)
     
     if os.path.exists(config.MODEL_PATH):
-    	print("[INFO] loading from ", config.MODEL_PATH)
-    	model = load_model(config.MODEL_PATH)
+        print("[INFO] loading from ", config.MODEL_PATH)
+        model = load_model(config.MODEL_PATH)
     else:
-        if config.NET_TYPE != 'resnet':
+        print("[INFO] NET_TYPE=", config.NET_TYPE)
+        if not 'resnet' in config.NET_TYPE:
             model = DetectionNet.build(width=config.RESIZE_WH, height=config.RESIZE_WH, depth=3, classes=config.CLASS_NUM)
         else:
-            model = ResnetBuilder.build_resnet_18((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+            if config.NET_TYPE == 'resnet18':
+                model = ResnetBuilder.build_resnet_18((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+            elif config.NET_TYPE == 'resnet34':
+                model = ResnetBuilder.build_resnet_34((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+            elif config.NET_TYPE == 'resnet50':
+                model = ResnetBuilder.build_resnet_50((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+            elif config.NET_TYPE == 'resnet101':
+                model = ResnetBuilder.build_resnet_101((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+            else:
+                model = ResnetBuilder.build_resnet_152((3, config.RESIZE_WH, config.RESIZE_WH), config.CLASS_NUM)
+
+    if config.CLASS_NUM == 2:
+        crossentropy_type = "binary_crossentropy"
+    else:
+        crossentropy_type = "categorical_crossentropy"    
+    print("[INFO] crossentropy_type=", crossentropy_type)
     
-    model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
+    model.compile(loss=crossentropy_type, optimizer=opt, metrics=["accuracy"])
     print(model.summary())
 
     # check to see if we are attempting to find an optimal learning rate
@@ -92,9 +109,12 @@ if __name__ == '__main__':
         sys.exit(0)
 
     print("[INFO] training network...")
+    checkpointer = ModelCheckpoint(os.path.join(config.CKPT_PATH, 'danger_scene_{epoch:03d}-{val_loss:.4f}.hdf5'),
+                                   monitor='val_loss', verbose=1, save_weights_only=False, period=config.SAVE_PERIOD)
+
     H = model.fit_generator(aug.flow(trainX, trainY, batch_size=config.BATCH_SIZE), validation_data=(testX, testY),
                             steps_per_epoch=trainX.shape[0] // config.BATCH_SIZE, epochs=config.NUM_EPOCHS,
-                            class_weight=classWeight, verbose=1)
+                            class_weight=classWeight, verbose=1, initial_epoch=0, callbacks=[checkpointer])
 
     print("[INFO] evaluating network...")
     predictions = model.predict(testX, batch_size=config.BATCH_SIZE)

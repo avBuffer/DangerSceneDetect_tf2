@@ -30,16 +30,17 @@ if __name__ == '__main__':
         image = cv2.imread(imagePath)
         output = image.copy()
 
-        image = cv2.resize(image, (128, 128))
+        image = cv2.resize(image, (config.RESIZE_WH, config.RESIZE_WH))
         image = image.astype("float32") / 255.0
         
         preds = model.predict(np.expand_dims(image, axis=0))[0]
-        j = np.argmax(preds)
-        label = config.CLASSES[j]
+        label_id = np.argmax(preds)
+        label = config.CLASSES[label_id]
 
         text = label if label == "Safe" else ("WARNING! %s!") % label
+        text_color = (0, 255, 0) if label == "Safe" else (0, 0, 255)
         output = imutils.resize(output, width=500)
-        cv2.putText(output, text, (35, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.25, (0, 255, 0), 5)
+        cv2.putText(output, text, (35, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.25, text_color, 5)
 
         out_file = os.path.sep.join([config.OUTPUT_IMAGE_PATH, filename])
         cv2.imwrite(out_file, output)
