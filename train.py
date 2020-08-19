@@ -16,9 +16,10 @@ from core.lr import LearningRateFinder
 from core.net import DetectionNet
 from core.resnet import ResnetBuilder
 from core import config
-from core import utils
+from core.utils import *
 
 matplotlib.use("Agg")
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 if __name__ == '__main__':
@@ -42,8 +43,8 @@ if __name__ == '__main__':
     print('safeLabels.len=', len(safeLabels), 'accidentLabels.len=', len(accidentLabels),
           'fireLabels.len=', len(fireLabels), 'robberyLabels.len=', len(robberyLabels))
 
-    data = np.vstack([fireData, nonFireData])
-    labels = np.hstack([fireLabels, nonFireLabels])
+    data = np.vstack([safeData, accidentData, fireData, robberyData])
+    labels = np.hstack([safeLabels, accidentLabels, fireLabels, robberyLabels])
     data /= 255
     print('data.len=', len(data), 'labels.len=', len(labels))
 
@@ -51,6 +52,7 @@ if __name__ == '__main__':
     labels = to_categorical(labels, num_classes=config.CLASS_NUM)
     classTotals = labels.sum(axis=0)
     classWeight = classTotals.max() / classTotals
+
     # construct the training and testing split
     trainX, testX, trainY, testY = train_test_split(data, labels, test_size=config.TEST_SPLIT, random_state=42)
     print('trainX.len=', len(trainX), 'trainY.len=', len(trainY), 'testX.len=', len(testX), 'testY.len=', len(testY))
@@ -88,7 +90,7 @@ if __name__ == '__main__':
     print("[INFO] crossentropy_type=", crossentropy_type)
     
     model.compile(loss=crossentropy_type, optimizer=opt, metrics=["accuracy"])
-    print(model.summary())
+    #print(model.summary())
 
     # check to see if we are attempting to find an optimal learning rate
     # before training for the full number of epochs
@@ -98,7 +100,7 @@ if __name__ == '__main__':
         lrf = LearningRateFinder(model)
         lrf.find(aug.flow(trainX, trainY, batch_size=config.BATCH_SIZE), 1e-10, 1e+1,
                  stepsPerEpoch=np.ceil((trainX.shape[0] / float(config.BATCH_SIZE))),
-                 epochs=20,  batchSize=config.BATCH_SIZE, classWeight=classWeight)
+                 epochs=20, batchSize=config.BATCH_SIZE, classWeight=classWeight)
 
         lrf.plot_loss()
         plt.savefig(config.LRFIND_PLOT_PATH)

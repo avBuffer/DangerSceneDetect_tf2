@@ -1,11 +1,11 @@
 from __future__ import division
 import six
-from keras.models import Model
-from keras.layers import Input, Activation, Dense, Flatten
-from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from keras.layers.merge import add, BatchNormalization
-from keras.regularizers import l2
-from keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Activation, Dense, Flatten
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.layers import add, BatchNormalization
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras import backend as K
 
 
 def _bn_relu(input):
@@ -71,7 +71,7 @@ def _residual_block(block_function, filters, repetitions, is_first_layer=False):
     def f(input):
         for i in range(repetitions):
             init_strides = (1, 1)
-            if i == 0 and not is_first_layer: 
+            if i == 0 and not is_first_layer:
                 init_strides = (2, 2)
             input = block_function(filters=filters, init_strides=init_strides,
                                    is_first_block_of_first_layer=(is_first_layer and i == 0))(input)

@@ -33,8 +33,7 @@ class LearningRateFinder:
 
     def is_data_iter(self, data):
         # define the set of class types we will check for
-        iterClasses = ["NumpyArrayIterator", "DirectoryIterator", "DataFrameIterator", 
-                       "Iterator", "Sequence"]
+        iterClasses = ["NumpyArrayIterator", "DirectoryIterator", "DataFrameIterator",  "Iterator", "Sequence"]
         return data.__class__.__name__ in iterClasses
 
 
@@ -69,8 +68,8 @@ class LearningRateFinder:
         K.set_value(self.model.optimizer.lr, lr)
 
 
-    def find(self, trainData, startLR, endLR, epochs=None, stepsPerEpoch=None,
-             batchSize=32, sampleSize=2048,    classWeight=None, verbose=1):
+    def find(self, trainData, startLR, endLR, epochs=None, stepsPerEpoch=None, batchSize=32,
+             sampleSize=2048, classWeight=None, verbose=1):
         self.reset()
 
         # determine if we are using a data generator or not
@@ -113,7 +112,7 @@ class LearningRateFinder:
         # check to see if we are using a data iterator
         if useGen:
             self.model.fit_generator(trainData, steps_per_epoch=stepsPerEpoch, epochs=epochs,
-                                       class_weight=classWeight, verbose=verbose, callbacks=[callback])
+                                     class_weight=classWeight, verbose=verbose, callbacks=[callback])
         # otherwise, our entire training data is already in memory
         else:
             # train our model using Keras' fit method

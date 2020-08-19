@@ -26,7 +26,7 @@ if __name__ == '__main__':
     imagePaths = imagePaths[:config.SAMPLE_SIZE]
 
     for idx, imagePath in enumerate(imagePaths):
-    	filename = os.path.split(imagePath)
+        filename = os.path.split(imagePath)[1]
         image = cv2.imread(imagePath)
         output = image.copy()
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         label_id = np.argmax(preds)
         label = config.CLASSES[label_id]
 
-        text = label if label == "Safe" else ("WARNING! %s!") % label
+        text = label if label == "Safe" else ("WARNING! %s!" % label)
         text_color = (0, 255, 0) if label == "Safe" else (0, 0, 255)
         output = imutils.resize(output, width=500)
         cv2.putText(output, text, (35, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.25, text_color, 5)
